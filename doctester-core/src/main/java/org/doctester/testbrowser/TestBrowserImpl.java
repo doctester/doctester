@@ -41,8 +41,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.RuntimeErrorException;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -255,12 +259,29 @@ public class TestBrowserImpl implements TestBrowser {
                 } else if (httpRequest.headers.containsKey(HEADER_CONTENT_TYPE)
                         && httpRequest.headers.containsValue(APPLICATION_XML_WITH_CHARSET_UTF_8)) {
 
-                    String string = new XmlMapper().writeValueAsString(httpRequest.payload);
+                    //String string = new XmlMapper().writeValueAsString(httpRequest.payload);
 
-                    StringEntity entity = new StringEntity(string, "utf-8");
-                    entity.setContentType(APPLICATION_XML_WITH_CHARSET_UTF_8);
+                    //TODO why we need to create an object and do not use it?
+                    //StringEntity entity = new StringEntity(string, "utf-8");
+                    //entity.setContentType(APPLICATION_XML_WITH_CHARSET_UTF_8);
 
-                    apacheHttpRequest.setEntity(new StringEntity(string, "utf-8"));
+                    StringWriter string = new StringWriter();
+                    XMLStreamWriter xmlStreamWriter = null;
+                    try {
+                        xmlStreamWriter = XMLOutputFactory.newFactory().createXMLStreamWriter(string);
+                    } catch (XMLStreamException e) {
+                        throw new IOException(e.getMessage());
+                    } finally {
+                        try {
+                            xmlStreamWriter.close();
+                        } catch (XMLStreamException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    new XmlMapper().writeValue(xmlStreamWriter, httpRequest.payload);
+
+                    apacheHttpRequest.setEntity(new StringEntity(string.toString(), "utf-8"));
 
                 } else if (httpRequest.payload instanceof String) {
 
